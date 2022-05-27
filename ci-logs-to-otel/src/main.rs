@@ -1,5 +1,4 @@
 use std::{
-    error::Error,
     fs::File,
     io::{Cursor, Read, Write},
 };
@@ -22,7 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn analyze_logs(owner: String, repo: String) -> Result<(), Box<dyn Error>> {
+async fn analyze_logs(owner: String, repo: String) -> Result<(), anyhow::Error> {
     let runs = octocrab::instance()
         .workflows(&owner, &repo)
         .list_all_runs()
@@ -38,9 +37,15 @@ async fn analyze_logs(owner: String, repo: String) -> Result<(), Box<dyn Error>>
         }
         dbg!((&run.id, &run.head_branch, &run.conclusion));
 
-        let mut log_file_contents = String::new();
         let zip = get_run_log_zipfile(&owner, &repo, run).await?;
-        let mut zip = ZipArchive::new(Cursor::new(zip))?;
+        let mut zip = match ZipArchive::new(Cursor::new(zip)) {
+            Ok(zip) => zip,
+            Err(e) => {
+                eprintln!("ERROR: could not read zip: {e:?}");
+                continue;
+            }
+        };
+        let mut log_file_contents = String::new();
         for i in 0..zip.len() {
             let mut log_file = zip.by_index(i)?;
             log_file.read_to_string(&mut log_file_contents)?;
@@ -59,7 +64,7 @@ async fn get_run_log_zipfile(
     owner: &String,
     repo: &String,
     run: Run,
-) -> Result<Bytes, Box<dyn Error>> {
+) -> Result<Bytes, anyhow::Error> {
     // cache in ~/tmp/logs
     let log_dir = home::home_dir()
         .unwrap()
