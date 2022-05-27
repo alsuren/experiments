@@ -1,11 +1,12 @@
 use std::{
     error::Error,
     fs::File,
-    io::{Read, Write},
+    io::{Cursor, Read, Write},
 };
 
 use bytes::Bytes;
 use octocrab::models::workflows::Run;
+use zip::ZipArchive;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -16,12 +17,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     octocrab::initialise(octocrab::Octocrab::builder().personal_token(token)).unwrap();
     println!("Hello, world!");
 
-    download_logs(owner, repo).await?;
+    analyze_logs(owner, repo).await?;
 
     Ok(())
 }
 
-async fn download_logs(owner: String, repo: String) -> Result<(), Box<dyn Error>> {
+async fn analyze_logs(owner: String, repo: String) -> Result<(), Box<dyn Error>> {
     let runs = octocrab::instance()
         .workflows(&owner, &repo)
         .list_all_runs()
@@ -31,14 +32,26 @@ async fn download_logs(owner: String, repo: String) -> Result<(), Box<dyn Error>
         // .status("success")
         .send()
         .await?;
-    Ok(for run in runs {
+    for run in runs {
         if run.name != "test" && run.status != "completed" {
             continue;
         }
         dbg!((&run.id, &run.head_branch, &run.conclusion));
 
-        get_run_log_zipfile(&owner, &repo, run).await?;
-    })
+        let mut log_file_contents = String::new();
+        let zip = get_run_log_zipfile(&owner, &repo, run).await?;
+        let mut zip = ZipArchive::new(Cursor::new(zip))?;
+        for i in 0..zip.len() {
+            let mut log_file = zip.by_index(i)?;
+            log_file.read_to_string(&mut log_file_contents)?;
+            let log_name = log_file.name();
+            let (first_line, rest) = log_file_contents.split_once('\n').unwrap();
+            let (rest, _trailing_newline) = rest.rsplit_once('\n').unwrap();
+            let (_, last_line) = rest.rsplit_once('\n').unwrap();
+            dbg!((log_name, first_line, last_line));
+        }
+    }
+    Ok(())
 }
 
 // FIXME: can we infer owner and repo from Run?
