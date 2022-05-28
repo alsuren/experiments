@@ -407,6 +407,7 @@ dependencies = [
  "async-recursion",
  "async_executors",
  "bytes 1.1.0",
+ "chrono",
  "home",
  "libhoney-rust 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "octocrab",
@@ -973,9 +974,9 @@ dependencies = [
 
 [[package]]
 name = "hyper"
-version = "0.14.18"
+version = "0.14.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b26ae0a80afebe130861d90abf98e3814a4f28a4c6ffeb5ab8ebb2be311e0ef2"
+checksum = "42dc3c131584288d375f2d07f822b0cb012d8c6fb899a5b9fdb3cb7eb9b6004f"
 dependencies = [
  "bytes 1.1.0",
  "futures-channel",
@@ -1018,7 +1019,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d87c48c02e0dc5e3b849a2041db3029fd066650f8f717c07bf8ed78ccb895cac"
 dependencies = [
  "http",
- "hyper 0.14.18",
+ "hyper 0.14.19",
  "rustls 0.20.6",
  "tokio 1.18.2",
  "tokio-rustls 0.23.4",
@@ -1031,7 +1032,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6183ddfa99b85da61a140bea0efc93fdf56ceaa041b37d553518030827f9905"
 dependencies = [
  "bytes 1.1.0",
- "hyper 0.14.18",
+ "hyper 0.14.19",
  "native-tls",
  "tokio 1.18.2",
  "tokio-native-tls",
@@ -1066,9 +1067,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "1.8.1"
+version = "1.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f647032dfaa1f8b6dc29bd3edb7bbef4861b8b8007ebb118d6db284fd59f6ee"
+checksum = "e6012d540c5baa3589337a98ce73408de9b5a25ec9fc2c6fd6be8f0d39e0ca5a"
 dependencies = [
  "autocfg",
  "hashbrown",
@@ -1510,7 +1511,7 @@ dependencies = [
 [[package]]
 name = "opentelemetry-honeycomb"
 version = "0.1.0"
-source = "git+https://github.com/ramosbugs/opentelemetry-honeycomb-rs#2472aab0a7f55c8cf65cbeb70216dd84548e7a2a"
+source = "git+https://github.com/alsuren/opentelemetry-honeycomb-rs?branch=errors#e0dfc50278279dce759d2a91f8226267510d766a"
 dependencies = [
  "async-channel",
  "async-std",
@@ -1844,7 +1845,7 @@ dependencies = [
  "h2 0.3.13",
  "http",
  "http-body 0.4.5",
- "hyper 0.14.18",
+ "hyper 0.14.19",
  "hyper-rustls 0.23.0",
  "hyper-tls",
  "ipnet",

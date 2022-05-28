@@ -10,11 +10,12 @@ anyhow = { version = "1.0.57", features = ["backtrace"] }
 async-recursion = "1.0.0"
 async_executors = { version = "0.6.0", features = ["tokio_tp"] }
 bytes = "1.1.0"
+chrono = "0.4.19"
 home = "0.5.3"
 libhoney-rust = "0.1.3"
 octocrab = "0.16.0"
 opentelemetry = { version = "0.16.0", features = ["trace"] }
-opentelemetry-honeycomb = { git = "https://github.com/ramosbugs/opentelemetry-honeycomb-rs" }
+opentelemetry-honeycomb = { git = "https://github.com/alsuren/opentelemetry-honeycomb-rs", branch = "errors" }
 tokio = { version = "1.18.2", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1.34"
 tracing-honeycomb = "0.4.1"
