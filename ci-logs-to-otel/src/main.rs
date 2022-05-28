@@ -50,13 +50,21 @@ async fn analyze_logs(owner: String, repo: String) -> Result<(), anyhow::Error> 
             let mut log_file = zip.by_index(i)?;
             log_file.read_to_string(&mut log_file_contents)?;
             let log_name = log_file.name();
-            let (first_line, rest) = log_file_contents.split_once('\n').unwrap();
-            let (rest, _trailing_newline) = rest.rsplit_once('\n').unwrap();
-            let (_, last_line) = rest.rsplit_once('\n').unwrap();
-            dbg!((log_name, first_line, last_line));
+            if let Some((first_line, last_line)) = parse_log(&log_file_contents) {
+                dbg!((log_name, first_line, last_line));
+            } else {
+                eprintln!("{log_name} not valid");
+            }
         }
     }
     Ok(())
+}
+
+fn parse_log(log_file_contents: &String) -> Option<(&str, &str)> {
+    let (first_line, rest) = log_file_contents.split_once('\n')?;
+    let (rest, _trailing_newline) = rest.rsplit_once('\n')?;
+    let (_, last_line) = rest.rsplit_once('\n')?;
+    Some((first_line, last_line))
 }
 
 // FIXME: can we infer owner and repo from Run?
