@@ -14,8 +14,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let owner = std::env::var("GITHUB_OWNER").expect("GITHUB_OWNER env variable is required");
     let repo = std::env::var("GITHUB_REPO").expect("GITHUB_REPO env variable is required");
     let token = std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN env variable is required");
+    let honeycomb_key =
+        std::env::var("HONEYCOMB_KEY").expect("GITHUB_TOKEN env variable is required");
 
-    honeycomb::register_global_subscriber();
+    honeycomb::register_global_subscriber(honeycomb_key);
     octocrab::initialise(octocrab::Octocrab::builder().personal_token(token)).unwrap();
     println!("Hello, world!");
 
