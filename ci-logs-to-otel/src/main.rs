@@ -112,28 +112,6 @@ async fn analyze_logs(owner: String, repo: String) -> Result<(), anyhow::Error> 
     Ok(())
 }
 
-async fn parse_log<'a>(
-    log_name: &'a str,
-    log_file_contents: &'a String,
-) -> Option<(&'a str, &'a str)> {
-    let (first_line, rest) = log_file_contents.split_once('\n')?;
-    let (rest, _trailing_newline) = rest.rsplit_once('\n')?;
-    let (_, last_line) = rest.rsplit_once('\n')?;
-
-    let (start_time, _) = first_line.split_once(' ')?;
-    let (end_time, _) = last_line.split_once(' ')?;
-
-    let tracer = tracer("");
-    let mut span = tracer
-        .span_builder(log_name.to_owned())
-        .with_parent_context(Context::current())
-        .with_start_time(chrono::DateTime::parse_from_rfc3339(start_time).ok()?)
-        .with_end_time(chrono::DateTime::parse_from_rfc3339(end_time).ok()?)
-        .start(&tracer);
-    span.end_with_timestamp(chrono::DateTime::parse_from_rfc3339(end_time).ok()?.into());
-    Some((first_line, last_line))
-}
-
 // FIXME: can we infer owner and repo from Run?
 #[instrument]
 async fn get_run_log_zipfile(
@@ -170,4 +148,26 @@ async fn get_run_log_zipfile(
             .write_all(&logs)?;
         Ok(logs)
     }
+}
+
+async fn parse_log<'a>(
+    log_name: &'a str,
+    log_file_contents: &'a String,
+) -> Option<(&'a str, &'a str)> {
+    let (first_line, rest) = log_file_contents.split_once('\n')?;
+    let (rest, _trailing_newline) = rest.rsplit_once('\n')?;
+    let (_, last_line) = rest.rsplit_once('\n')?;
+
+    let (start_time, _) = first_line.split_once(' ')?;
+    let (end_time, _) = last_line.split_once(' ')?;
+
+    let tracer = tracer("");
+    let mut span = tracer
+        .span_builder(log_name.to_owned())
+        .with_parent_context(Context::current())
+        .with_start_time(chrono::DateTime::parse_from_rfc3339(start_time).ok()?)
+        .with_end_time(chrono::DateTime::parse_from_rfc3339(end_time).ok()?)
+        .start(&tracer);
+    span.end_with_timestamp(chrono::DateTime::parse_from_rfc3339(end_time).ok()?.into());
+    Some((first_line, last_line))
 }
