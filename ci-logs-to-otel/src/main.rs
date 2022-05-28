@@ -1,3 +1,5 @@
+mod honeycomb;
+
 use std::{
     fs::File,
     io::{Cursor, Read, Write},
@@ -13,6 +15,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let repo = std::env::var("GITHUB_REPO").expect("GITHUB_REPO env variable is required");
     let token = std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN env variable is required");
 
+    honeycomb::register_global_subscriber();
     octocrab::initialise(octocrab::Octocrab::builder().personal_token(token)).unwrap();
     println!("Hello, world!");
 
