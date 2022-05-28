@@ -10,7 +10,7 @@ use tracing::instrument;
 use zip::ZipArchive;
 
 use async_executors::TokioTpBuilder;
-use opentelemetry::trace::{FutureExt, TraceContextExt, Tracer};
+use opentelemetry::trace::{TraceContextExt, Tracer};
 use opentelemetry::Context;
 use opentelemetry::{
     global::{shutdown_tracer_provider, tracer},
@@ -77,16 +77,7 @@ async fn analyze_logs(owner: String, repo: String) -> Result<(), anyhow::Error> 
 
         dbg!((&run.id, &run.head_branch, &run.conclusion));
 
-        let tracer = tracer("");
-        let span = tracer
-            .span_builder("run")
-            .with_parent_context(Context::current())
-            .with_start_time(run.created_at.clone())
-            .with_end_time(run.updated_at.clone())
-            .start(&tracer);
-        let context = Context::current_with_span(span);
-
-        let zip = get_run_log_zipfile(&owner, &repo, run).await?;
+        let zip = get_run_log_zipfile(&owner, &repo, &run).await?;
         let mut zip = match ZipArchive::new(Cursor::new(zip)) {
             Ok(zip) => zip,
             Err(e) => {
@@ -94,15 +85,24 @@ async fn analyze_logs(owner: String, repo: String) -> Result<(), anyhow::Error> 
                 continue;
             }
         };
+
+        let tracer = tracer("");
+        let mut span = tracer
+            .span_builder("run")
+            .with_parent_context(Context::current())
+            .with_start_time(run.created_at.clone())
+            .with_end_time(run.updated_at.clone())
+            .start(&tracer);
+        span.end_with_timestamp(run.updated_at.clone().into());
+        let context = Context::current_with_span(span);
+        let _guard = context.attach();
+
         let mut log_file_contents = String::new();
         for i in 0..zip.len() {
             let mut log_file = zip.by_index(i)?;
             log_file.read_to_string(&mut log_file_contents)?;
             let log_name = log_file.name();
-            if let Some((first_line, last_line)) = parse_log(log_name, &log_file_contents)
-                .with_context(context.clone())
-                .await
-            {
+            if let Some((first_line, last_line)) = parse_log(log_name, &log_file_contents) {
                 dbg!((log_name, first_line, last_line));
             } else {
                 eprintln!("{log_name} not valid");
@@ -117,7 +117,7 @@ async fn analyze_logs(owner: String, repo: String) -> Result<(), anyhow::Error> 
 async fn get_run_log_zipfile(
     owner: &String,
     repo: &String,
-    run: Run,
+    run: &Run,
 ) -> Result<Bytes, anyhow::Error> {
     // cache in ~/tmp/logs
     let log_dir = home::home_dir()
@@ -150,10 +150,7 @@ async fn get_run_log_zipfile(
     }
 }
 
-async fn parse_log<'a>(
-    log_name: &'a str,
-    log_file_contents: &'a String,
-) -> Option<(&'a str, &'a str)> {
+fn parse_log<'a>(log_name: &'a str, log_file_contents: &'a str) -> Option<(&'a str, &'a str)> {
     let (first_line, rest) = log_file_contents.split_once('\n')?;
     let (rest, _trailing_newline) = rest.rsplit_once('\n')?;
     let (_, last_line) = rest.rsplit_once('\n')?;
@@ -169,5 +166,38 @@ async fn parse_log<'a>(
         .with_end_time(chrono::DateTime::parse_from_rfc3339(end_time).ok()?)
         .start(&tracer);
     span.end_with_timestamp(chrono::DateTime::parse_from_rfc3339(end_time).ok()?.into());
+    let context = Context::current_with_span(span);
+    let _guard = context.attach();
+
+    let mut current_span_name: Option<&str> = None;
+    let mut current_span_start_time = None;
+    for line in log_file_contents.lines() {
+        if let Some((time, msg)) = line.split_once(' ') {
+            if msg.starts_with("##[group]") {
+                {
+                    if let (Some(current_span_name), Some(current_span_start_time)) =
+                        (current_span_name.take(), current_span_start_time.take())
+                    {
+                        let mut span = tracer
+                            .span_builder(current_span_name.to_owned())
+                            .with_parent_context(Context::current())
+                            .with_start_time(current_span_start_time)
+                            .with_end_time(chrono::DateTime::parse_from_rfc3339(time).ok()?)
+                            .start(&tracer);
+                        span.end_with_timestamp(
+                            chrono::DateTime::parse_from_rfc3339(time).ok()?.into(),
+                        );
+                    }
+                    // FIXME: bundle up everything between ##[group] and ##[endgroup] into the span header somehow
+                    // and then make each log line into a log message in the span?
+                }
+                current_span_name = Some(msg);
+                current_span_start_time = Some(chrono::DateTime::parse_from_rfc3339(time).ok()?);
+            } else if msg == "##[endgroup]" {
+            }
+        }
+    }
+    // FIXME: if we still have a group open, we should report it here.
+
     Some((first_line, last_line))
 }
