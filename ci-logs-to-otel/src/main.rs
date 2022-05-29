@@ -70,11 +70,12 @@ async fn analyze_logs(owner: String, repo: String) -> Result<(), anyhow::Error> 
         // .status("success")
         .send()
         .await?;
-    for run in runs {
-        if run.name != "test" || run.status != "completed" {
-            continue;
-        }
-
+    for run in runs
+        .into_iter()
+        .filter(|run| run.name == "test" && run.status == "completed")
+        .skip(1)
+        .take(1)
+    {
         dbg!((&run.id, &run.head_branch, &run.conclusion));
 
         let zip = get_run_log_zipfile(&owner, &repo, &run).await?;
